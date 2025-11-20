@@ -4,11 +4,11 @@ const prisma = new PrismaClient();
 
 const get_data_user = async () => {
   try {
-    const many_datas = await prisma.category.findMany();
+    const manyDatas = await prisma.user.findMany()
     return {
       statuscode: 200,
       msg: "get succeded",
-      datas: many_datas,
+      datas: manyDatas,
     };
   } catch (error) {
     console.log(error);

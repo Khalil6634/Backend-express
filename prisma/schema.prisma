@@ -13,49 +13,162 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                Int   @id @default(autoincrement())
+  firstname         String?  @db.VarChar(255)
+  lastname          String?  @db.VarChar(255)
+  email             String   @db.VarChar(255)
+  password          String   @db.VarChar(255)
+  specialization_id Int?  // Assuming this links to another table if not null
+  created_at        DateTime @default(now()) @db.Timestamp
+  updated_at        DateTime? @updatedAt @db.Timestamp
+  roles             UserRole @default(USER)
+
+  // Relations
+  enrolled_courses  Enrolled_course[]
+  requests          Request[]
+
+  @@map("user")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+
+model Request {
+  id            Int   @id @default(autoincrement())
+  title         String   @db.VarChar(255)
+  user_id       Int
+  category_id   Int
+  request_type  String?  @db.VarChar(255)
+
+  // Relations
+  user          User     @relation(fields: [user_id], references: [id])
+  category      Category @relation(fields: [category_id], references: [id])
+
+  @@map("request")
+}
+
+// --- Course Categories ---
+
 model Category {
-  createAt DateTime @default(now())
-  name     String
-  userId   String   
-  icon     String
-  type     String   @default("income")
+  id               Int   @id @default(autoincrement())
+  category_name    String   @db.VarChar(255)
+  category_img     String?  @db.VarChar(255)
+  description      String?  @db.Text
+  created_at       DateTime @default(now()) @db.Timestamp
+  updated_at       DateTime? @updatedAt @db.Timestamp
 
-  @@unique([name, userId, type])
+  // Relations
+  courses          Course[]
+  requests         Request[]
+
+  @@map("category")
 }
 
-model Transaction {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updateAt  DateTime @default(now())
+// --- Course Definition ---
 
-  amount      Float
-  description String
-  date        DateTime
-  userId      String
-  type        String   @default("income")
+model Course {
+  id                Int   @id @default(autoincrement())
+  course_name       String   @db.VarChar(255)
+  category_id       Int
+  course_img        String?  @db.VarChar(255)
+  description       String?  @db.Text
+  learning_objectives String // Assuming list in diagram translates to an array type
+  advantages        String // Assuming list in diagram translates to an array type
+  total_rating      Float?   @db.Double
+  total_video       Int?     @db.Int
+  total_times       Int?     @db.Int
+  created_at        DateTime @default(now()) @db.Timestamp
+  updated_at        DateTime? @updatedAt @db.Timestamp
 
-  category     String
-  categoryIcon String
+  // Relations
+  category          Category          @relation(fields: [category_id], references: [id])
+  enrolled_courses  Enrolled_course[]
+  sections          Section[]
+  tools             Tool[]
+
+  @@map("course")
 }
 
-model MonthHistory {
-  userId  String
-  day     Int
-  month   Int
-  year    Int
-  income  Float
-  expense Float
+model Tool {
+  id           Int @id @default(autoincrement())
+  course_id    Int
+  tools_name   String @db.VarChar(255)
+  tools_icon   String @db.VarChar(255)
+  tools_url    String @db.VarChar(255)
 
-  @@id([day, month, year, userId])
+  // Relations
+  course       Course @relation(fields: [course_id], references: [id])
+
+  @@map("tools")
 }
 
-model YearHistory {
-  userId  String
-  month   Int
-  year    Int
-  income  Float
-  expense Float
+// --- Course Content (Sections and Materials) ---
 
-  @@id([month, year, userId])
+model Section {
+  id           Int   @id @default(autoincrement())
+  course_id    Int
+  section_name String   @db.VarChar(255)
+  created_at   DateTime @default(now()) @db.Timestamp
+  updated_at   DateTime? @updatedAt @db.Timestamp
+
+  // Relations
+  course       Course     @relation(fields: [course_id], references: [id])
+  materials    Material[]
+
+  @@map("section")
 }
 
+model Material {
+  id            Int   @id @default(autoincrement())
+  section_id    Int
+  material_type String   @db.VarChar(255)
+  material_name String   @db.VarChar(255)
+  material_url  String?  @db.VarChar(255)
+  created_at    DateTime @default(now()) @db.Timestamp
+  updated_at    DateTime? @updatedAt @db.Timestamp
+
+  // Relations
+  section       Section @relation(fields: [section_id], references: [id])
+  reports       Report[]
+
+  @@map("material")
+}
+
+// --- Enrollment and Progress ---
+
+model Enrolled_course {
+  id           Int   @id @default(autoincrement())
+  user_id      Int
+  course_id    Int
+  rating       Float?   @db.Double
+  review       String?  @db.VarChar(255)
+  progress     Int?     @db.Int
+  created_at   DateTime @default(now()) @db.Timestamp
+  updated_at   DateTime? @updatedAt @db.Timestamp
+
+  // Relations
+  user         User     @relation(fields: [user_id], references: [id])
+  course       Course   @relation(fields: [course_id], references: [id])
+  reports      Report[]
+
+  @@unique([user_id, course_id]) // Assuming a user can only enroll in a course once
+  @@map("enrolled_course")
+}
+
+model Report {
+  id                 Int  @id @default(autoincrement())
+  enrolled_course_id Int
+  material_id        Int
+  is_completed       Boolean @default(false)
+
+  // Relations
+  enrolled_course    Enrolled_course @relation(fields: [enrolled_course_id], references: [id])
+  material           Material        @relation(fields: [material_id], references: [id])
+
+  @@unique([enrolled_course_id, material_id]) // Assuming a report is unique for a specific material in an enrollment
+  @@map("report")
+}

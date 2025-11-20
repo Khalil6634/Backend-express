@@ -3,24 +3,21 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const delete_data_user = async (user_id) => {
+  const idUser = String(user_id)
   try {
-    const deleted_user = await prisma.category.delete({
-      where: { userId: user_id },
+    await prisma.category.delete({
+      where: { userId: idUser},
     });
-
-    if (!delete_data_user)
-      return { msg: "datas not found", statuscode: 404, details: {} };
 
     return {
       msg: "delete data users succed!!",
-      statuscode: 201,
-      details: delete_data_user,
+      statuscode: 201
     };
+    
   } catch (error) {
     return {
-      msg: "error in server",
+      msg: error,
       statuscode: 500,
-      details: {},
     };
   }
 };
